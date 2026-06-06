@@ -9,6 +9,8 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   :root {
     --navy: #003366;
@@ -60,7 +62,14 @@
     overflow: hidden;
     flex-shrink: 0;
   }
-  .logo-box img { width: 100%; height: 100%; object-fit: contain; }
+  .logo-box img { 
+    width: 100%; 
+    height: 100%; 
+    object-fit: contain; 
+    display: block;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
   .logo-text { font-size: 9px; font-weight: 600; color: var(--navy); text-align: center; line-height: 1.2; padding: 4px; }
   .header-titles { flex: 1; }
   .header-titles h1 { font-size: 15px; font-weight: 600; color: white; letter-spacing: 0.01em; line-height: 1.2; }
@@ -317,7 +326,7 @@
 <!-- HEADER -->
 <header>
   <div class="logo-box">
-    <img id="logo-img" src="data:image/jpeg;base64,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" alt="Geoinfotech"/>
+    <img id="logo-img" src="data:image/jpeg;base64,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" alt="Geoinfotech Logo" style="width:100%;height:100%;object-fit:contain;display:block;"/>
   </div>
   <div class="header-titles">
     <h1>Lagos Road Degradation Risk Intelligence Dashboard</h1>
@@ -759,8 +768,45 @@ function renderStats(name, d) {
 
 // ─── EXPORT PDF ─────────────────────────────────────────────────────────────
 function exportPDF() {
-  const title = selectedLGAName
-    ? `Lagos_Road_Risk_${selectedLGAName.replace(/\//g,'_')}_March2026`
+  const btn = document.querySelector('.btn-pdf');
+  const originalText = btn.innerHTML;
+  btn.innerHTML = '⏳ Generating PDF...';
+  btn.disabled = true;
+
+  const lga = document.getElementById('detail-lga-name');
+  const title = lga ? lga.textContent.trim() : 'Lagos_Road_Risk';
+  const filename = title + '_Road_Risk_Report.pdf';
+
+  // Capture the full dashboard as canvas then save as PDF
+  html2canvas(document.body, {
+    scale: 1.5,
+    useCORS: true,
+    allowTaint: true,
+    backgroundColor: '#f0f4f8',
+    scrollX: 0,
+    scrollY: 0,
+    windowWidth: document.documentElement.scrollWidth,
+    windowHeight: document.documentElement.scrollHeight
+  }).then(function(canvas) {
+    const imgData = canvas.toDataURL('image/jpeg', 0.92);
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({
+      orientation: 'landscape',
+      unit: 'px',
+      format: [canvas.width, canvas.height]
+    });
+    pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
+    pdf.save(filename);
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+  }).catch(function(err) {
+    console.error('PDF export error:', err);
+    // Fallback to print dialog
+    window.print();
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+  });
+}_March2026`
     : 'Lagos_Road_Degradation_Risk_Dashboard_March2026';
 
   const opt = {

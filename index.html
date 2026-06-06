@@ -9,8 +9,6 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   :root {
     --navy: #003366;
@@ -62,14 +60,7 @@
     overflow: hidden;
     flex-shrink: 0;
   }
-  .logo-box img { 
-    width: 100%; 
-    height: 100%; 
-    object-fit: contain; 
-    display: block;
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: crisp-edges;
-  }
+  .logo-box img { width: 100%; height: 100%; object-fit: contain; }
   .logo-text { font-size: 9px; font-weight: 600; color: var(--navy); text-align: center; line-height: 1.2; padding: 4px; }
   .header-titles { flex: 1; }
   .header-titles h1 { font-size: 15px; font-weight: 600; color: white; letter-spacing: 0.01em; line-height: 1.2; }
@@ -308,18 +299,36 @@
 
   /* PRINT STYLES */
   @media print {
-    body { overflow: visible; height: auto; }
-    header { position: relative; }
-    .main-layout { overflow: visible; height: auto; }
-    .sidebar { display: none; }
-    .map-container { height: 400px; }
-    .stats-panel { width: 100%; border: none; }
-    .stats-body { overflow: visible; }
-    .btn-action { display: none; }
-    footer { position: relative; }
-    .chart-container { height: 200px; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body { overflow: visible !important; height: auto !important; background: white !important; }
+    .header { position: relative !important; break-inside: avoid; }
+    .sidebar { display: none !important; }
+    .map-container { display: none !important; }
+    .map-legend { display: none !important; visibility: hidden !important; position: static !important; }
+    .btn-print, .btn-pdf { display: none !important; }
+    .detail-panel {
+      display: block !important;
+      width: 100% !important;
+      height: auto !important;
+      overflow: visible !important;
+      position: relative !important;
+      padding: 24px !important;
+      break-inside: avoid;
+    }
+    .main-layout { display: block !important; height: auto !important; overflow: visible !important; }
+    .placeholder { display: none !important; }
+    .lga-detail { display: block !important; }
+    .chart-container { height: 200px !important; break-inside: avoid; }
+    .risk-bar-track { background: #e5e7eb !important; }
+    .kpi-card { border: 1px solid #e5e7eb !important; break-inside: avoid; }
+    .factor-card { break-inside: avoid; }
+    .corridor-item { break-inside: avoid; }
+    h2, h3, h4 { break-after: avoid; }
   }
+
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 
@@ -769,54 +778,27 @@ function renderStats(name, d) {
 // ─── EXPORT PDF ─────────────────────────────────────────────────────────────
 function exportPDF() {
   const btn = document.querySelector('.btn-pdf');
-  const originalText = btn.innerHTML;
-  btn.innerHTML = '⏳ Generating PDF...';
+  const orig = btn.innerHTML;
+  btn.innerHTML = '⏳ Generating...';
   btn.disabled = true;
-
-  const lga = document.getElementById('detail-lga-name');
-  const title = lga ? lga.textContent.trim() : 'Lagos_Road_Risk';
-  const filename = title + '_Road_Risk_Report.pdf';
-
-  // Capture the full dashboard as canvas then save as PDF
-  html2canvas(document.body, {
-    scale: 1.5,
-    useCORS: true,
-    allowTaint: true,
-    backgroundColor: '#f0f4f8',
-    scrollX: 0,
-    scrollY: 0,
-    windowWidth: document.documentElement.scrollWidth,
-    windowHeight: document.documentElement.scrollHeight
-  }).then(function(canvas) {
-    const imgData = canvas.toDataURL('image/jpeg', 0.92);
+  const panel = document.querySelector('.detail-panel');
+  const title = document.getElementById('detail-lga-name')?.textContent?.trim() || 'Lagos_Road_Risk';
+  html2canvas(panel, {
+    scale: 2, useCORS: true, backgroundColor: '#ffffff',
+    scrollX: 0, scrollY: 0
+  }).then(canvas => {
+    const img = canvas.toDataURL('image/jpeg', 0.92);
     const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({
-      orientation: 'landscape',
-      unit: 'px',
-      format: [canvas.width, canvas.height]
-    });
-    pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
-    pdf.save(filename);
-    btn.innerHTML = originalText;
-    btn.disabled = false;
-  }).catch(function(err) {
-    console.error('PDF export error:', err);
-    // Fallback to print dialog
-    window.print();
-    btn.innerHTML = originalText;
-    btn.disabled = false;
-  });
-}_March2026`
-    : 'Lagos_Road_Degradation_Risk_Dashboard_March2026';
-
-  const opt = {
-    margin: 0.3,
-    filename: `${title}.pdf`,
-    image: { type: 'jpeg', quality: 0.95 },
-    html2canvas: { scale: 2, useCORS: true },
-    jsPDF: { unit: 'in', format: 'a3', orientation: 'landscape' }
-  };
-  html2pdf().set(opt).from(document.body).save();
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: 'a4' });
+    const pw = pdf.internal.pageSize.getWidth();
+    const ph = pdf.internal.pageSize.getHeight();
+    const ratio = Math.min(pw / canvas.width, ph / canvas.height);
+    const iw = canvas.width * ratio;
+    const ih = canvas.height * ratio;
+    pdf.addImage(img, 'JPEG', (pw - iw) / 2, 20, iw, ih);
+    pdf.save(title + '_Road_Risk.pdf');
+    btn.innerHTML = orig; btn.disabled = false;
+  }).catch(() => { window.print(); btn.innerHTML = orig; btn.disabled = false; });
 }
 
 // Auto-select Shomolu on load (highest risk LGA)
